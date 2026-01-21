@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BA CRED - Gestão Profissional</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --primary: #1e293b;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --white: #ffffff;
+        }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; margin: 0; display: flex; justify-content: center; color: #1e293b; }
+        .app { width: 100%; max-width: 480px; background: var(--bg); min-height: 100vh; position: relative; padding-bottom: 90px; }
+        
+        .header { background: var(--primary); color: white; padding: 25px 20px; border-radius: 0 0 25px 25px; }
+        .brand { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+        .brand span { color: var(--accent); }
+        
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .stat-card { background: rgba(255,255,255,0.08); padding: 12px; border-radius: 12px; }
+        .stat-val { display: block; font-size: 18px; font-weight: bold; }
+        .stat-lbl { font-size: 10px; opacity: 0.7; text-transform: uppercase; font-weight: 800; }
+
+        .search-area { padding: 20px; }
+        .search-input { width: 100%; padding: 14px; border-radius: 15px; border: 1px solid #e2e8f0; box-sizing: border-box; font-size: 16px; outline: none; }
+
+        .tabs { display: flex; gap: 8px; padding: 0 20px 15px; overflow-x: auto; }
+        .tab { padding: 8px 18px; border-radius: 20px; background: white; border: 1px solid #e2e8f0; cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap; }
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .list { padding: 0 20px; }
+        .card { background: white; border-radius: 18px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 6px solid #e2e8f0; }
+        .card.atrasado { border-left-color: var(--danger); }
+        .card.pago { border-left-color: var(--accent); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .client-name { font-weight: 800; font-size: 18px; margin: 0; color: var(--primary); cursor: pointer; }
+
+        .card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .label { font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; }
+        .value { font-size: 16px; font-weight: 700; }
+
+        .card-actions { display: flex; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 15px; }
+        .btn-action { flex: 1; padding: 10px; border-radius: 10px; border: none; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-whatsapp { background: #22c55e; color: white; text-decoration: none; }
+        .btn-status { background: #f1f5f9; color: var(--primary); }
+
+        /* Modal Atualizado com Dossiê */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: white; width: 100%; max-width: 420px; padding: 20px; border-radius: 24px; max-height: 90vh; overflow-y: auto; }
+        .modal-content label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-top: 10px; display: block; }
+        .modal-content input, .modal-content textarea { width: 100%; padding: 10px; margin: 5px 0 10px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 15px; outline: none; }
+        
+        .img-container { width: 100%; height: 150px; background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-top: 5px; cursor: pointer; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+
+        .fab { position: fixed; bottom: 30px; right: 30px; background: var(--accent); color: white; width: 64px; height: 64px; border-radius: 32px; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 10px 15px rgba(16, 185, 129, 0.4); cursor: pointer; z-index: 90; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <div class="brand">BA <span>CRED</span> 💰</div>
+        <div class="stats-row">
+            <div class="stat-card">
+                <span class="stat-lbl">Saldo na Rua</span>
+                <span class="stat-val" id="statRua">R$ 0,00</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-lbl">Total Recebido</span>
+                <span class="stat-val" id="statRecebido" style="color: var(--accent);">R$ 0,00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-area">
+        <input type="text" class="search-input" id="search" placeholder="Buscar por nome..." oninput="render()">
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="setFilter('Todos', this)">Todos</div>
+        <div class="tab" onclick="setFilter('Pendente', this)">Pendentes</div>
+        <div class="tab" onclick="setFilter('Pago', this)">Pagos</div>
+    </div>
+
+    <div id="loanList" class="list"></div>
+
+    <div class="fab" onclick="openModal()">+</div>
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin:0 0 15px">Novo Registro</h3>
+        <input type="hidden" id="editId">
+        
+        <label>Nome do Cliente</label>
+        <input type="text" id="name" placeholder="Nome completo">
+        
+        <label>WhatsApp (DDD + Numero)</label>
+        <input type="number" id="phone" placeholder="73999999999">
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+            <div><label>Valor (R$)</label><input type="number" id="amount"></div>
+            <div><label>Juros (%)</label><input type="number" id="tax"></div>
+        </div>
+
+        <label>Vencimento</label>
+        <input type="date" id="payDate">
+
+        <div style="background: #f8fafc; padding: 15px; border-radius: 15px; margin-top: 10px; border: 1px solid #e2e8f0;">
+            <p style="margin:0 0 10px; font-weight: 800; font-size: 12px; color: var(--primary)">DOSSIÊ DE SEGURANÇA</p>
+            <label>CPF</label>
+            <input type="text" id="cpf" placeholder="000.000.000-00">
+            <label>Endereço Completo</label>
+            <textarea id="address" placeholder="Rua, Número, Bairro..." rows="2" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;"></textarea>
+            
+            <label>Prova de Contratação (Foto/Doc)</label>
+            <input type="file" id="fileInput" accept="image/*" style="display: none" onchange="handleImage(this)">
+            <div class="img-container" onclick="document.getElementById('fileInput').click()">
+                <span id="imgPlaceholder" style="color:#94a3b8; font-size:12px">Clique para anexar foto</span>
+                <img id="imgPreview" style="display:none">
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top: 20px;">
+            <button onclick="closeModal()" style="flex:1; padding:14px; border:none; border-radius:12px; background:#f1f5f9; font-weight:bold">Sair</button>
+            <button id="btnDel" onclick="deleteLoan()" style="display:none; flex:1; background:var(--danger); color:white; border:none; border-radius:12px; font-weight:bold">Apagar</button>
+            <button onclick="save()" style="flex:2; background:var(--primary); color:white; border:none; border-radius:12px; font-weight:bold">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let loans = JSON.parse(localStorage.getItem('bacred_final')) || [];
+    let currentFilter = 'Todos';
+    let tempImg = "";
+
+    function openModal(id = null) {
+        document.getElementById('modal').style.display = 'flex';
+        const btnDel = document.getElementById('btnDel');
+        const imgPrev = document.getElementById('imgPreview');
+        const imgPlace = document.getElementById('imgPlaceholder');
+
+        if(id) {
+            const l = loans.find(x => x.id === id);
+            document.getElementById('editId').value = l.id;
+            document.getElementById('name').value = l.name;
+            document.getElementById('phone').value = l.phone || '';
+            document.getElementById('amount').value = l.amount;
+            document.getElementById('tax').value = l.tax;
+            document.getElementById('cpf').value = l.cpf || '';
+            document.getElementById('address').value = l.address || '';
+            const parts = l.payDate.split('/');
+            document.getElementById('payDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            
+            tempImg = l.proof || "";
+            if(tempImg) {
+                imgPrev.src = tempImg; imgPrev.style.display = 'block'; imgPlace.style.display = 'none';
+            } else {
+                imgPrev.style.display = 'none'; imgPlace.style.display = 'block';
+            }
+
+            document.getElementById('modalTitle').innerText = "Editar Cadastro";
+            btnDel.style.display = 'block';
+        } else {
+            resetForm();
+            document.getElementById('modalTitle').innerText = "Novo Registro";
+            btnDel.style.display = 'none';
+            imgPrev.style.display = 'none'; imgPlace.style.display = 'block';
+        }
+    }
+
+    function handleImage(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            tempImg = e.target.result;
+            document.getElementById('imgPreview').src = tempImg;
+            document.getElementById('imgPreview').style.display = 'block';
+            document.getElementById('imgPlaceholder').style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+    function resetForm() { 
+        document.getElementById('editId').value = ''; 
+        tempImg = "";
+        ['name','phone','amount','tax','payDate','cpf','address'].forEach(i => document.getElementById(i).value = ''); 
+    }
+
+    function save() {
+        const id = document.getElementById('editId').value;
+        const name = document.getElementById('name').value;
+        const amount = parseFloat(document.getElementById('amount').value);
+        const dateRaw = document.getElementById('payDate').value;
+        if(!name || !amount || !dateRaw) return alert("Preencha os campos principais!");
+
+        const payDate = dateRaw.split('-').reverse().join('/');
+        const data = {
+            id: id ? parseInt(id) : Date.now(),
+            name, phone: document.getElementById('phone').value,
+            amount, tax: parseFloat(document.getElementById('tax').value || 0),
+            total: amount + (amount * (parseFloat(document.getElementById('tax').value || 0)/100)),
+            payDate, cpf: document.getElementById('cpf').value,
+            address: document.getElementById('address').value,
+            proof: tempImg,
+            status: id ? loans.find(x => x.id == id).status : 'Pendente'
+        };
+
+        if(id) loans = loans.map(l => l.id == id ? data : l);
+        else loans.push(data);
+
+        localStorage.setItem('bacred_final', JSON.stringify(loans));
+        closeModal();
+        render();
+    }
+
+    function deleteLoan() {
+        if(confirm("Apagar registro permanentemente?")) {
+            loans = loans.filter(l => l.id != document.getElementById('editId').value);
+            localStorage.setItem('bacred_final', JSON.stringify(loans));
+            closeModal(); render();
+        }
+    }
+
+    function toggleStatus(id) {
+        loans = loans.map(l => l.id === id ? {...l, status: l.status === 'Pendente' ? 'Pago' : 'Pendente'} : l);
+        localStorage.setItem('bacred_final', JSON.stringify(loans));
+        render();
+    }
+
+    function setFilter(f, el) {
+        currentFilter = f;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        render();
+    }
+
+    function render() {
+        const container = document.getElementById('loanList');
+        const search = document.getElementById('search').value.toLowerCase();
+        const today = new Date().setHours(0,0,0,0);
+        let rua = 0, recebido = 0;
+        container.innerHTML = '';
+
+        loans.forEach(l => { if(l.status === 'Pendente') rua += l.total; else recebido += l.total; });
+        document.getElementById('statRua').innerText = `R$ ${rua.toLocaleString('pt-BR')}`;
+        document.getElementById('statRecebido').innerText = `R$ ${recebido.toLocaleString('pt-BR')}`;
+
+        loans.filter(l => (currentFilter === 'Todos' || l.status === currentFilter) && l.name.toLowerCase().includes(search))
+        .reverse().forEach(l => {
+            const dateParts = l.payDate.split('/');
+            const isAtrasado = l.status === 'Pendente' && new Date(dateParts[2], dateParts[1]-1, dateParts[0]).getTime() < today;
+            const isPago = l.status === 'Pago';
+
+            container.innerHTML += `
+                <div class="card ${isAtrasado ? 'atrasado' : ''} ${isPago ? 'pago' : ''}">
+                    <div class="card-header">
+                        <h3 class="client-name" onclick="openModal(${l.id})">${l.name}</h3>
+                        <div style="font-weight:900; font-size:12px; color:${isPago ? 'var(--accent)' : (isAtrasado ? 'var(--danger)' : '#64748b')}">
+                            ${isPago ? 'CONCLUÍDO' : (isAtrasado ? 'VENCIDO' : 'ABERTO')}
+                        </div>
+                    </div>
+                    <div class="card-body" onclick="openModal(${l.id})">
+                        <div><div class="label">Emprestado</div><div class="value">R$ ${l.amount.toFixed(2)}</div></div>
+                        <div><div class="label">A Receber</div><div class="value" style="color:var(--danger)">R$ ${l.total.toFixed(2)}</div></div>
+                        <div style="grid-column:span 2"><div class="label">Vencimento</div><div class="value">📅 ${l.payDate}</div></div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-action btn-status" onclick="toggleStatus(${l.id})">${isPago ? '↩️ Reabrir' : '✅ Receber'}</button>
+                        ${l.phone ? `<a href="https://wa.me/55${l.phone}?text=Olá ${l.name}, lembrete da BA CRED no valor de R$ ${l.total.toFixed(2)}." class="btn-action btn-whatsapp" target="_blank">💬 Cobrar</a>` : ''}
+                    </div>
+                </div>`;
+        });
+    }
+    render();
+</script>
+</body>
+</html>
